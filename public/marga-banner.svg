@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 480" role="img" aria-labelledby="title desc">
+  <title id="title">Marga — an AI guide for the road</title>
+  <desc id="desc">Dark green banner with a winding saffron road, location marker, and Marga wordmark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071d1a"/>
+      <stop offset="0.58" stop-color="#0e3a33"/>
+      <stop offset="1" stop-color="#176b5b"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f6b36b"/>
+      <stop offset="1" stop-color="#ef7b45"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#8dd5c2" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#8dd5c2" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#00110e" flood-opacity=".45"/>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#c8f1e6" stroke-opacity=".055"/>
+    </pattern>
+    <clipPath id="frame"><rect width="1440" height="480" rx="28"/></clipPath>
+  </defs>
+  <rect width="1440" height="480" rx="28" fill="url(#bg)"/>
+  <rect width="1440" height="480" rx="28" fill="url(#grid)"/>
+  <g clip-path="url(#frame)">
+    <circle cx="1160" cy="96" r="300" fill="url(#glow)"/>
+    <path d="M850 520C876 385 1007 390 1010 283c3-91-89-101-53-189 25-61 98-83 170-128" fill="none" stroke="#f8f4e8" stroke-opacity=".13" stroke-width="92" stroke-linecap="round"/>
+    <path d="M850 520C876 385 1007 390 1010 283c3-91-89-101-53-189 25-61 98-83 170-128" fill="none" stroke="url(#road)" stroke-width="12" stroke-linecap="round" stroke-dasharray="28 25"/>
+    <g transform="translate(1093 72)" filter="url(#shadow)">
+      <path d="M65 0C29 0 0 29 0 65c0 50 65 123 65 123s65-73 65-123C130 29 101 0 65 0Z" fill="#f8f4e8"/>
+      <circle cx="65" cy="65" r="25" fill="#ef7b45"/>
+    </g>
+  </g>
+  <g transform="translate(108 105)">
+    <g transform="translate(0 8)">
+      <rect width="72" height="72" rx="22" fill="#f8f4e8"/>
+      <path d="M22 49 36 19l14 30-14-7-14 7Z" fill="#176b5b"/>
+      <circle cx="36" cy="54" r="4" fill="#ef7b45"/>
+    </g>
+    <text x="98" y="72" fill="#f8f4e8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="86" font-weight="760" letter-spacing="-3">Marga</text>
+    <text x="4" y="144" fill="#bde0d6" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="500" letter-spacing="1.2">AN AI GUIDE FOR THE ROAD</text>
+    <line x1="4" y1="178" x2="500" y2="178" stroke="#f8f4e8" stroke-opacity=".2"/>
+    <text x="4" y="222" fill="#f8f4e8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21">Navigation  •  Local context  •  Live information  •  Voice</text>
+    <g transform="translate(4 262)">
+      <rect width="142" height="38" rx="19" fill="#f8f4e8" fill-opacity=".1" stroke="#f8f4e8" stroke-opacity=".18"/>
+      <text x="71" y="25" fill="#d9eee8" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="650">INDIA-FIRST</text>
+      <rect x="154" width="132" height="38" rx="19" fill="#f8f4e8" fill-opacity=".1" stroke="#f8f4e8" stroke-opacity=".18"/>
+      <text x="220" y="25" fill="#d9eee8" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="650">WEB-FIRST</text>
+      <rect x="298" width="162" height="38" rx="19" fill="#ef7b45" fill-opacity=".18" stroke="#f6b36b" stroke-opacity=".45"/>
+      <text x="379" y="25" fill="#ffd4ae" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="650">EVIDENCE-BASED</text>
+    </g>
+  </g>
+</svg>

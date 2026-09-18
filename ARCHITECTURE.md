@@ -2,7 +2,7 @@
 
 Marga is an India-first navigation product with a route-aware voice companion. Navigation remains useful when AI or live information is unavailable.
 
-## Current web slice
+## Current India web build
 
 - React/Vinext client rendered application
 - MapLibre map renderer
@@ -10,9 +10,12 @@ Marga is an India-first navigation product with a route-aware voice companion. N
 - Photon place search
 - OSRM route calculation
 - Browser geolocation, speech recognition, and speech synthesis
-- Local rules for companion answers and interruption timing
+- Client navigation session with progress, maneuver priority, off-route detection, and rerouting
+- Route-aware attention rules with interests, freshness, confidence, cooldowns, and duplicate suppression
+- Evidence-only conversation endpoint with an optional OpenAI Responses API adapter
+- Local journey journal with JSON export
 
-Public community endpoints are suitable for development and low-volume testing only. Production must use self-hosted regional services or providers with service guarantees.
+Public community endpoints cover India for development and low-volume testing. They do not provide a production service guarantee. Before launch, routing and search move to self-hosted India extracts or contracted providers. Verified nationwide traffic, incidents, construction, and event coverage are not available from the current free sources and remain explicit unavailable capabilities.
 
 ## Target system
 

@@ -1,87 +1,55 @@
 # Marga delivery roadmap
 
-## Phase 1 — Web navigation foundation
+The active target is one complete web product for India. Android starts only after the web acceptance gates pass.
 
-Goal: prove route planning and core driving interface for India.
+## Phase 1 — India web foundation
 
-Scope: destination search, current location, route display, route summary, responsive map interface, browser voice input/output, provider fallbacks, and India demo route.
+Status: implemented and under regression testing.
 
-Exit tests:
+Scope: responsive MapLibre interface, India-only destination search, route calculation, map fallback, browser location, voice input/output, and explicit provider availability.
 
-- Production build completes.
-- Desktop and mobile layouts remain usable.
-- Delhi demo works without external map tiles.
-- Live place search and routing degrade to clear fallback states.
-- Location denial does not break navigation.
+Exit gates: production build passes; desktop and mobile are usable; representative routes across north, south, east, west, northeast, and Himalayan India resolve; provider failure leaves a clear fallback state.
 
-Status: first working slice implemented.
+## Phase 2 — Driving session
 
-## Phase 2 — Navigation session
+Status: implemented and under browser testing.
 
-Goal: make movement along a route reliable.
+Scope: maneuver steps, GPS route matching, progress, off-route detection, rerouting from the current position, route versions, audio priority, local session persistence, and deterministic drive replay.
 
-Scope: route steps, simulated GPS replay, progress matching, maneuver timing, off-route detection, rerouting, route versions, audio priority, and session persistence.
-
-Exit tests:
-
-- Recorded routes replay at different speeds.
-- GPS jumps do not cause false reroutes.
-- Missed turns create a new route and invalidate stale events.
-- Guidance interrupts companion audio safely.
-- Session resumes after refresh or temporary network loss.
+Exit gates: route replay advances instructions; three consecutive off-route samples trigger one reroute; stale route events cannot speak; refresh restores the active session; navigation speech takes priority.
 
 ## Phase 3 — Route-aware companion
 
-Goal: surface useful places without excessive interruption.
+Status: core implementation complete; source coverage remains in progress.
 
-Scope: route corridor queries, landmark and food candidates, interests, novelty tracking, cooldowns, confidence rules, evidence records, and tool-based conversation.
+Scope: nearby landmarks, food, current weather, optional local news, route-aware ranking, interests, cooldowns, duplicate suppression, freshness and confidence rules, text/voice questions, and evidence-linked answers.
 
-Exit tests:
+Exit gates: expired and weak evidence is rejected; nearby unrelated items stay silent; maneuvers suppress optional speech; answers cite evidence; missing evidence produces an honest unavailable response.
 
-- Candidates behind the driver stay silent.
-- Upcoming complex maneuvers suppress optional speech.
-- Repeated landmarks are not announced.
-- Every spoken fact links to stored evidence.
-- Ambiguous “what is that?” questions ask for clarification.
+## Phase 4 — Live road intelligence
 
-## Phase 4 — Live India information
+Status: adapter boundary ready; verified traffic, incidents, construction, and nationwide events require production data sources.
 
-Goal: add trustworthy traffic, incidents, construction, weather, events, and alerts for one launch region.
+Scope: route-matched traffic and incidents, road closures, construction, weather alerts, event feeds, detour comparison, provider monitoring, and safe structured announcements.
 
-Scope: provider adapters, freshness rules, incident-to-route matching, detour calculation, structured safety templates, source monitoring, and coverage dashboards.
+Exit gates: stale feeds never create current-condition claims; incidents on unrelated roads are suppressed; reroutes show time impact; outage preserves navigation; multi-city samples match source data.
 
-Exit tests:
+## Phase 5 — Journey memory and web hardening
 
-- Stale feeds never produce current-condition claims.
-- Incidents on nearby unrelated roads are suppressed.
-- Reroutes show actual time saved or added.
-- Provider outages preserve basic navigation.
-- Launch-region samples pass manual source comparison.
+Status: local journal implemented; hardening remains.
 
-## Phase 5 — Journey memory and Android
+Scope: route samples, encountered places, spoken facts, confirmed stops, export, privacy controls, installable PWA behavior, low-connectivity caching, accessibility, and performance.
 
-Goal: turn proven web behavior into a driving-ready mobile product.
+Exit gates: drive-by places are not marked as visits; journal survives refresh; export and deletion work; cached navigation state degrades safely; mobile browser checks pass.
 
-Scope: Kotlin Android app, background location, offline regional data, Android audio focus, optional trip sync, confirmed stops, photo consent, and journey journals.
+## Phase 6 — India web release
 
-Exit tests:
+Status: not started. No production deployment until preceding gates pass.
 
-- Background guidance survives screen lock and process pressure.
-- Offline guidance covers a downloaded region.
-- Battery use meets an agreed driving-hour budget.
-- Drive-by places are not recorded as visits.
-- Users can export and delete trip history.
+Scope: end-to-end regression, source and license audit, security review, cost-per-driving-hour measurement, pilot drives, regional language QA, and launch monitoring.
 
-## Phase 6 — Pilot and expansion
+Exit gates: all automated suites pass; manual pilot routes pass; material data gaps are shown in-product; operating cost fits budget; privacy and retention behavior is documented.
 
-Goal: validate safety, usefulness, and economics before national rollout.
+## Deferred — Android
 
-Scope: closed pilot, interruption feedback, source audits, regional language trials, provider cost analysis, and state-by-state coverage gates.
-
-Exit tests:
-
-- Critical navigation failure rate meets launch target.
-- Unwanted interruption rate declines across pilot rounds.
-- Cost per driving hour fits budget.
-- Privacy and retention controls pass review.
-- Each new region passes address, route, traffic, and landmark coverage checks.
+Kotlin/MapLibre Native, background location, Android audio focus, downloaded regional maps, and mobile battery work begin after the India web release is stable. API contracts and safety rules will be reused.

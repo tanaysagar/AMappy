@@ -105,13 +105,13 @@ flowchart TB
     Web[Web driver experience] --> Nav[Navigation session]
     Web --> Voice[Voice and text conversation]
     Nav --> Attention[On-device attention gate]
-    Voice --> Ask[/api/ask]
-    Attention --> Context[/api/context]
-    Nav --> Route[/api/route]
-    Web --> Search[/api/search]
+    Voice --> Ask["/api/ask"]
+    Attention --> Context["/api/context"]
+    Nav --> Route["/api/route"]
+    Web --> Search["/api/search"]
 
     Search --> Mappls[Mappls autosuggest and pin resolution]
-    Web --> Reverse[/api/reverse]
+    Web --> Reverse["/api/reverse"]
     Reverse --> Mappls
     Route --> MapplsRoute[Mappls traffic ETA routing]
     Route --> OSRM[OSRM fallback]

@@ -15,11 +15,16 @@ export type GroundedAnswer = {
   mode: "grounded-fallback";
 };
 
-function requestedType(question: string) {
+export function requestedType(question: string) {
   const query = question.toLowerCase();
   if (/\b(food|eat|restaurant|meal|hungry)\b/.test(query)) return "food";
   if (/\b(weather|rain|temperature|hot|cold|forecast)\b/.test(query)) return "weather";
-  if (/\b(news|happening|event|festival)\b/.test(query)) return "news";
+  if (/\b(park|nature|natural|scenic|viewpoint|garden)\b/.test(query)) return "scenic";
+  if (/\b(shop|shopping|mall|market)\b/.test(query)) return "business";
+  if (/\b(sport|sports|stadium)\b/.test(query)) return "sport";
+  if (/\b(museum|culture|cultural|gallery|art)\b/.test(query)) return "culture";
+  if (/\b(event|festival)\b/.test(query)) return "event";
+  if (/\b(news|happening)\b/.test(query)) return "news";
   return "landmark";
 }
 

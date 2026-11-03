@@ -25,3 +25,22 @@ test("interest match makes relevant candidate stronger", () => {
   const food: ContextCandidate = { ...base, id: "food", type: "food" };
   assert.equal(selectAnnouncement([food, base], context)?.id, "fort");
 });
+
+test("supports photography and local event interests", () => {
+  const photo: ContextCandidate = { ...base, id: "photo", type: "scenic" };
+  const event: ContextCandidate = { ...base, id: "event", type: "event" };
+  assert.ok(evaluateCandidate(photo, { ...context, interests: ["Photography"] }).score > evaluateCandidate(photo, { ...context, interests: [] }).score);
+  assert.ok(evaluateCandidate(event, { ...context, interests: ["Local events"] }).score > evaluateCandidate(event, { ...context, interests: [] }).score);
+});
+
+test("supports shopping and sports place interests", () => {
+  const shop: ContextCandidate = { ...base, id: "shop", type: "business" };
+  const stadium: ContextCandidate = { ...base, id: "stadium", type: "sport" };
+  assert.ok(evaluateCandidate(shop, { ...context, interests: ["Shopping"] }).score > evaluateCandidate(shop, { ...context, interests: [] }).score);
+  assert.ok(evaluateCandidate(stadium, { ...context, interests: ["Sports"] }).score > evaluateCandidate(stadium, { ...context, interests: [] }).score);
+});
+
+test("routine weather does not crowd out places when every interest is selected", () => {
+  const weather: ContextCandidate = { ...base, id: "weather", type: "weather", location: undefined, confidence: .9, urgency: .18 };
+  assert.equal(selectAnnouncement([weather, base], { ...context, interests: ["History", "Food", "Architecture", "Nature", "Culture"] })?.id, "fort");
+});

@@ -1,6 +1,6 @@
 import { distanceMetres, type Coordinate } from "./navigation";
 
-export type CandidateType = "safety" | "weather" | "landmark" | "food" | "culture" | "event" | "news" | "scenic" | "business";
+export type CandidateType = "safety" | "weather" | "landmark" | "food" | "culture" | "event" | "news" | "scenic" | "business" | "sport";
 
 export type ContextCandidate = {
   id: string;
@@ -18,7 +18,7 @@ export type ContextCandidate = {
 
 export type AttentionContext = {
   position: Coordinate;
-  headingDegrees: number;
+  headingDegrees: number | null;
   speedMetresPerSecond: number;
   distanceToManeuver: number;
   interests: string[];
@@ -30,10 +30,12 @@ export type AttentionContext = {
 
 const interestType: Record<string, CandidateType[]> = {
   history: ["landmark", "culture"], food: ["food"], architecture: ["landmark", "culture"],
-  nature: ["scenic", "weather"], culture: ["culture", "event"], shopping: ["business"], sports: ["event"],
+  nature: ["scenic"], culture: ["culture", "event"], shopping: ["business"], sports: ["sport", "event"],
+  photography: ["scenic", "landmark"], "local events": ["event"],
 };
 
-export function isAhead(position: Coordinate, headingDegrees: number, target: Coordinate) {
+export function isAhead(position: Coordinate, headingDegrees: number | null, target: Coordinate) {
+  if (headingDegrees === null) return true;
   const heading = headingDegrees * Math.PI / 180;
   const east = target[0] - position[0];
   const north = target[1] - position[1];

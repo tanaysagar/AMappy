@@ -6,16 +6,25 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "test": "npm run test:navigation && npm run test:attention && npm run test:journey && npm run test:grounding && npm run test:location && npm run test:trip-state && npm run test:mappls && npm run test:mappls-api && npm run test:ask-api && npm run test:route-api && npm run test:rate-limit",
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",
     "build": "node scripts/run-framework.mjs build",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test:india": "node scripts/smoke-india.mjs",
+    "test:india": "node --env-file-if-exists=.env.local scripts/smoke-india.mjs",
+    "test:addresses": "node --env-file-if-exists=.env.local scripts/audit-addresses.mjs",
     "test:navigation": "node --import tsx --test tests/navigation.test.ts",
+    "test:route-api": "node --import tsx --test tests/route-api.test.ts",
+    "test:rate-limit": "node --import tsx --test tests/rate-limit.test.ts",
     "test:attention": "node --import tsx --test tests/attention.test.ts",
     "test:journey": "node --import tsx --test tests/journey.test.ts",
     "test:grounding": "node --import tsx --test tests/grounding.test.ts",
+    "test:ask-api": "node --import tsx --test tests/ask-api.test.ts",
+    "test:location": "node --import tsx --test tests/location.test.ts",
+    "test:trip-state": "node --import tsx --test tests/trip-state.test.ts",
+    "test:mappls": "node --import tsx --test tests/mappls.test.ts",
+    "test:mappls-api": "node --import tsx --test tests/mappls-api.test.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

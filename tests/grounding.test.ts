@@ -24,6 +24,16 @@ const evidence: GroundingEvidence[] = [
     validUntil: now + 60_000,
     confidence: 0.8,
   },
+  ...(["scenic", "business", "sport", "culture", "event"] as const).map((type) => ({
+    id: type,
+    type,
+    title: type,
+    summary: `${type} result`,
+    sourceName: "Test places",
+    sourceUrl: `https://example.com/${type}`,
+    validUntil: now + 60_000,
+    confidence: 0.8,
+  })),
 ];
 
 test("answers weather questions from fresh matching evidence", () => {
@@ -34,6 +44,14 @@ test("answers weather questions from fresh matching evidence", () => {
 
 test("answers food questions from food evidence", () => {
   assert.equal(groundedFallback("Find food", evidence, now).answer, "A verified restaurant is nearby.");
+});
+
+test("answers each place-interest question from matching evidence", () => {
+  assert.equal(groundedFallback("Find a scenic park", evidence, now).answer, "scenic result");
+  assert.equal(groundedFallback("Is there a shopping mall?", evidence, now).answer, "business result");
+  assert.equal(groundedFallback("Any sports stadium?", evidence, now).answer, "sport result");
+  assert.equal(groundedFallback("Tell me about a museum", evidence, now).answer, "culture result");
+  assert.equal(groundedFallback("Any festival today?", evidence, now).answer, "event result");
 });
 
 test("rejects expired evidence", () => {

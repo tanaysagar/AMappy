@@ -62,7 +62,11 @@ export function updateSession(session: RouteSession, position: Coordinate, route
   const match = matchRoute(position, route);
   const offRouteStrikes = match.distanceFromRoute > 80 ? session.offRouteStrikes + 1 : 0;
   let currentStepIndex = session.currentStepIndex;
-  while (currentStepIndex < steps.length - 1 && distanceMetres(position, steps[currentStepIndex].location) < 35) currentStepIndex += 1;
+  while (currentStepIndex < steps.length - 1) {
+    const stepProgress = matchRoute(steps[currentStepIndex].location, route).progressMetres;
+    if (distanceMetres(position, steps[currentStepIndex].location) >= 35 && match.progressMetres <= stepProgress + 25) break;
+    currentStepIndex += 1;
+  }
   return {
     session: { ...session, lastPosition: position, progressMetres: Math.max(session.progressMetres, match.progressMetres), offRouteStrikes, currentStepIndex },
     distanceFromRoute: match.distanceFromRoute,
@@ -74,6 +78,18 @@ export function updateSession(session: RouteSession, position: Coordinate, route
 export function shouldAnnounceManeuver(distance: number, speedMetresPerSecond: number, stage: "early" | "near") {
   const secondsAway = distance / Math.max(speedMetresPerSecond, 2.5);
   return stage === "early" ? secondsAway <= 28 && secondsAway > 9 : secondsAway <= 9;
+}
+
+export function maneuverInstruction(maneuver: { type?: string; modifier?: string; exit?: number }, roadName: string | undefined, destination: string) {
+  const direction = maneuver.modifier ? ` ${maneuver.modifier}` : "";
+  const road = roadName ? ` on ${roadName}` : "";
+  if (maneuver.type === "arrive") return `Arrive at ${destination}`;
+  if (maneuver.type === "roundabout" || maneuver.type === "rotary") return `At the roundabout, take${maneuver.exit ? ` exit ${maneuver.exit}` : " the indicated exit"}${road}`;
+  if (maneuver.type === "turn" || maneuver.type === "end of road") return `Turn${direction}${road}`;
+  if (maneuver.type === "fork") return `Keep${direction}${road}`;
+  if (maneuver.type === "merge") return `Merge${direction}${road}`;
+  if (maneuver.type === "off ramp" || maneuver.type === "on ramp") return `Take the ramp${direction}${road}`;
+  return `Continue${direction}${road}`;
 }
 
 export function createSession(routeVersion: number, position: Coordinate, now = Date.now()): RouteSession {

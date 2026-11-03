@@ -146,19 +146,19 @@ Planning and audit files:
 README.md
   Public project overview.
 
-ARCHITECTURE.md
+docs/project/ARCHITECTURE.md
   System architecture and target production shape.
 
-ROADMAP.md
+docs/project/ROADMAP.md
   Phase plan.
 
-DELIVERY_GAPS.md
+docs/readiness/DELIVERY_GAPS.md
   Customer prototype gap audit.
 
-DAILY_DRIVER_READINESS_AUDIT.md
+docs/readiness/DAILY_DRIVER_READINESS_AUDIT.md
   Google Maps replacement readiness audit.
 
-ADDRESS_AND_RATINGS_PLAN.md
+docs/driver-experience/ADDRESS_AND_RATINGS_PLAN.md
   Address quality and restaurant-rating plan.
 ```
 

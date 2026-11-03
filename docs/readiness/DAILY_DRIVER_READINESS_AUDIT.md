@@ -251,4 +251,4 @@ Expand region/road/device coverage, improve data sources and evaluate native And
 4. Grounding rules exist, but evidence provenance is not authenticated by the server and enforcement differs across answer paths.
 5. The relevance selector exists, but the automatic spoken companion promised in the original concept is not fully connected.
 
-This audit creates a new readiness record alongside `DELIVERY_GAPS.md` and `ADDRESS_AND_RATINGS_PLAN.md`. It changes no application behavior and claims no fixes or deployment.
+This audit creates a new readiness record alongside [delivery gaps](DELIVERY_GAPS.md) and [address and ratings plan](../driver-experience/ADDRESS_AND_RATINGS_PLAN.md). It changes no application behavior and claims no fixes or deployment.

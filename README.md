@@ -11,8 +11,8 @@
   <a href="#working-today">Features</a> ·
   <a href="#run-locally">Local setup</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="./ROADMAP.md">Roadmap</a> ·
-  <a href="./ARCHITECTURE.md">Design notes</a>
+  <a href="./docs/project/ROADMAP.md">Roadmap</a> ·
+  <a href="./docs/project/ARCHITECTURE.md">Design notes</a>
 </p>
 
 ## What is Marga?
@@ -25,7 +25,7 @@ The map remains the primary interface. Optional companion speech is filtered by 
 
 ## Working today
 
-**Readiness correction:** the features below describe implemented pieces, not a verified complete trip. See [DELIVERY_GAPS.md](./DELIVERY_GAPS.md) for fixes already verified, remaining functions, and customer acceptance gates. Browser GPS tracking is implemented, while real-device movement and end-to-end navigation still require field validation.
+**Readiness correction:** the features below describe implemented pieces, not a verified complete trip. See [DELIVERY_GAPS.md](./docs/readiness/DELIVERY_GAPS.md) for fixes already verified, remaining functions, and customer acceptance gates. Browser GPS tracking is implemented, while real-device movement and end-to-end navigation still require field validation.
 
 | Area | Current implementation |
 | --- | --- |
@@ -127,7 +127,7 @@ flowchart TB
 
 Navigation does not depend on the language model. The model cannot create route geometry, traffic observations, closures, weather readings, or source evidence. Provider-specific logic stays behind API adapters so community services can be replaced with self-hosted India extracts or contracted feeds.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for boundaries, target services, storage, and cost controls.
+See [ARCHITECTURE.md](./docs/project/ARCHITECTURE.md) for boundaries, target services, storage, and cost controls.
 
 ## Free-first stack
 
@@ -153,7 +153,7 @@ Marga is still pre-release software. It has not completed real-road safety valid
 
 ## Delivery plan
 
-The active target is the complete India web product. Android is intentionally deferred until the web acceptance gates pass. Work is organized into navigation, driving session, route-aware companion, live road intelligence, web hardening, and release phases in [ROADMAP.md](./ROADMAP.md).
+The active target is the complete India web product. Android is intentionally deferred until the web acceptance gates pass. Work is organized into navigation, driving session, route-aware companion, live road intelligence, web hardening, and release phases in [ROADMAP.md](./docs/project/ROADMAP.md).
 
 ## Repository map
 
@@ -178,3 +178,9 @@ scripts/smoke-india.mjs  Representative India provider checks
 ## Name
 
 **Marga** comes from the Sanskrit word for path or way. It is the current working product name; formal trademark and domain checks are still required before launch.
+
+## Project documents
+
+- **Project** — [project story](docs/project/PROJECT_STORY.md), [roadmap](docs/project/ROADMAP.md), [architecture](docs/project/ARCHITECTURE.md).
+- **Driver experience** — [address and ratings plan](docs/driver-experience/ADDRESS_AND_RATINGS_PLAN.md), [driver experience research](docs/driver-experience/DRIVER_EXPERIENCE_RESEARCH.md).
+- **Readiness** — [delivery gaps](docs/readiness/DELIVERY_GAPS.md), [daily driver readiness audit](docs/readiness/DAILY_DRIVER_READINESS_AUDIT.md).

@@ -17,6 +17,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 
+declare const __MARGA_API_ORIGIN__: string;
+const apiOrigin = typeof __MARGA_API_ORIGIN__ === "string" ? __MARGA_API_ORIGIN__ : "";
+const onlineMapStyle = "https://tiles.openfreemap.org/styles/liberty";
+const offlineMapStyle: maplibregl.StyleSpecification = {
+  version: 8, sources: {},
+  layers: [{ id: "offline-background", type: "background", paint: { "background-color": "#e2ebe5" } }],
+};
+
 type LngLat = [number, number];
 type SearchResult = { id: string; displayName: string; precision: string; provider: "Mappls" };
 type SearchTarget = "origin" | "destination";
@@ -94,6 +102,7 @@ export default function Home() {
   const [guideInputOpen, setGuideInputOpen] = useState(false);
   const [assistantText, setAssistantText] = useState("Choose a route or use your current location, then I’ll look for verified information around you.");
   const [interests, setInterests] = useState(["History", "Food", "Architecture"]);
+  const [offline, setOffline] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<LngLat[]>([]);
   const [driving, setDriving] = useState(false);
   const [liveGuidance, setLiveGuidance] = useState(false);
@@ -171,13 +180,21 @@ export default function Home() {
     const map = mapRef.current;
     setMapHealth("loading");
     if (!map) return;
-    map.setStyle("https://tiles.openfreemap.org/styles/liberty");
+    map.setStyle(navigator.onLine ? onlineMapStyle : offlineMapStyle);
   }
 
   useEffect(() => {
     if (!mapNode.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: mapNode.current, center: [77.225, 28.636], zoom: 12.4, attributionControl: false, style: "https://tiles.openfreemap.org/styles/liberty" });
+    const map = new maplibregl.Map({ container: mapNode.current, center: [77.225, 28.636], zoom: 12.4, pixelRatio: Math.min(window.devicePixelRatio, 2), attributionControl: false, style: navigator.onLine ? onlineMapStyle : offlineMapStyle });
     mapRef.current = map;
+    const onConnectivity = () => {
+      setOffline(!navigator.onLine);
+      if (!navigator.onLine) map.setStyle(offlineMapStyle);
+      else { lastContext.current = null; map.setStyle(onlineMapStyle); }
+    };
+    setOffline(!navigator.onLine);
+    window.addEventListener("online", onConnectivity);
+    window.addEventListener("offline", onConnectivity);
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     const loadingTimeout = window.setTimeout(() => setMapHealth("error"), 12_000);
     const ensureRouteLayer = () => {
@@ -196,6 +213,8 @@ export default function Home() {
     map.on("zoom", () => { const fix = latestPosition.current; if (fix) updateLiveMarker(fix.point, fix.accuracy, fix.heading, false); });
     return () => {
       window.clearTimeout(loadingTimeout);
+      window.removeEventListener("online", onConnectivity);
+      window.removeEventListener("offline", onConnectivity);
       markers.current.forEach((marker) => marker.remove());
       liveMarker.current?.remove(); liveMarker.current = null; liveMarkerElement.current = null;
       map.getCanvas().removeEventListener("webglcontextlost", markLost);
@@ -253,7 +272,7 @@ export default function Home() {
     searchRequest.current = controller;
     try {
       const bias = latestPosition.current?.point ?? origin;
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&lat=${bias[1]}&lon=${bias[0]}`, { signal: controller.signal });
+      const response = await fetch(`${apiOrigin}/api/search?q=${encodeURIComponent(query)}&lat=${bias[1]}&lon=${bias[0]}`, { signal: controller.signal });
       const data = await response.json() as { results?: SearchResult[]; error?: string };
       if (!response.ok) throw new Error(data.error || "Place search unavailable");
       if (searchRequest.current !== controller) return;
@@ -265,14 +284,14 @@ export default function Home() {
   }
 
   async function refreshContext(position = origin, headingDegrees: number | null = latestPosition.current?.heading ?? null, speedMetresPerSecond = 0) {
-    if (contextRequest.current) return;
+    if (!navigator.onLine || contextRequest.current) return;
     const controller = new AbortController();
     contextRequest.current = controller;
     attentionContext.current = { ...attentionContext.current, position, headingDegrees, speedMetresPerSecond };
     lastContext.current = { position, at: nowMs() };
     setContextLoading(true);
     try {
-      const response = await fetch(`/api/context?lat=${position[1]}&lon=${position[0]}`, { signal: controller.signal });
+      const response = await fetch(`${apiOrigin}/api/context?lat=${position[1]}&lon=${position[0]}`, { signal: controller.signal });
       if (!response.ok) throw new Error();
       const data = await response.json() as { candidates: ContextCandidate[]; availability?: Record<string, boolean> };
       if (contextRequest.current !== controller) return;
@@ -298,7 +317,7 @@ export default function Home() {
     routeRequest.current = controller;
     setLoading(true); setStatus("Finding best route…");
     try {
-      const response = await fetch(`/api/route?from=${start.join(",")}&to=${point.join(",")}`, { signal: controller.signal });
+      const response = await fetch(`${apiOrigin}/api/route?from=${start.join(",")}&to=${point.join(",")}`, { signal: controller.signal });
       if (!response.ok) throw new Error();
       const data = await response.json() as { routes?: OsrmRoute[]; provider?: string; trafficAwareEta?: boolean; destinationAccessDistanceMetres?: number | null }; const route = data.routes?.[0]; if (!route) throw new Error();
       if (routeRequest.current !== controller) return;
@@ -383,7 +402,7 @@ export default function Home() {
     cancelSearch();
     setExactEndpoint(point, target, fallbackLabel);
     try {
-      const response = await fetch(`/api/reverse?lat=${point[1]}&lon=${point[0]}`, { signal: controller.signal });
+      const response = await fetch(`${apiOrigin}/api/reverse?lat=${point[1]}&lon=${point[0]}`, { signal: controller.signal });
       if (!response.ok) return;
       const result = await response.json() as ReverseResult;
       if (endpointRequests.current[target] !== controller || endpointRevisions.current[target] !== revision) return;
@@ -401,7 +420,7 @@ export default function Home() {
     setStatus("Resolving Mappls place…");
     try {
       const bias = latestPosition.current?.point ?? origin;
-      const response = await fetch(`/api/resolve?pin=${encodeURIComponent(result.id)}&lat=${bias[1]}&lon=${bias[0]}`, { signal: controller.signal });
+      const response = await fetch(`${apiOrigin}/api/resolve?pin=${encodeURIComponent(result.id)}&lat=${bias[1]}&lon=${bias[0]}`, { signal: controller.signal });
       const data = await response.json() as { point?: LngLat; error?: string };
       if (!response.ok || !data.point) throw new Error(data.error || "Mappls could not resolve this place");
       if (endpointRequests.current[target] !== controller || endpointRevisions.current[target] !== revision) return;
@@ -473,7 +492,7 @@ export default function Home() {
     });
     const controller = new AbortController();
     const [lon, lat] = pinDraft;
-    void fetch(`/api/reverse?lat=${lat}&lon=${lon}`, { signal: controller.signal })
+    void fetch(`${apiOrigin}/api/reverse?lat=${lat}&lon=${lon}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) return;
         const result = await response.json() as ReverseResult;
@@ -504,7 +523,11 @@ export default function Home() {
     const update = updateSession(sessionRef.current, position, activeRoute, activeSteps);
     sessionRef.current = update.session;
     if (tripSnapshotRef.current) { tripSnapshotRef.current = { ...tripSnapshotRef.current, session: update.session }; writeStored(TRIP_KEY, tripSnapshotRef.current); }
-    setJourney((current) => current ? persistJourney(addJourneySample(current, position)) : current);
+    setJourney((current) => {
+      if (!current) return current;
+      const next = addJourneySample(current, position);
+      return next === current ? current : persistJourney(next);
+    });
     let distanceToManeuver = Number.POSITIVE_INFINITY;
     if (update.nextStep) {
       const distance = Math.max(0, matchRoute(update.nextStep.location, activeRoute).progressMetres - update.session.progressMetres);
@@ -533,7 +556,7 @@ export default function Home() {
       setJourney((current) => current ? persistJourney(completeJourney(current)) : current);
       return;
     }
-    if (watchRef.current !== null && update.shouldReroute && destinationPosition && !rerouting.current && nowMs() - lastRerouteAt.current >= 30_000) {
+    if (navigator.onLine && watchRef.current !== null && update.shouldReroute && destinationPosition && !rerouting.current && nowMs() - lastRerouteAt.current >= 30_000) {
       rerouting.current = true; lastRerouteAt.current = nowMs(); setStatus("Off route. Recalculating…"); sessionRef.current.offRouteStrikes = 0;
       void calculateRoute(destinationPosition, position, true).finally(() => { rerouting.current = false; });
     }
@@ -637,7 +660,7 @@ export default function Home() {
     if (!prompt.trim()) return "";
     try {
       const position = latestPosition.current?.point ?? origin;
-      const response = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: prompt, lat: position[1], lon: position[0] }) });
+      const response = await fetch(`${apiOrigin}/api/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: prompt, lat: position[1], lon: position[0] }) });
       if (!response.ok) throw new Error();
       const data = await response.json() as AskPayload;
       const answeredAt = nowMs();
@@ -694,7 +717,7 @@ export default function Home() {
     {mapHealth !== "ready" && <div className={`map-fallback ${mapHealth}`} role="status" aria-live="polite"><div className="map-state"><strong>{mapHealth === "error" ? "Live map unavailable" : "Loading live map…"}</strong><span>{mapHealth === "error" ? "Background image is only a placeholder. Routes and search may still work." : "Connecting to map tiles"}</span>{mapHealth === "error" && <Button type="button" size="sm" onClick={retryMap}><RefreshCw size={14}/>Retry map</Button>}</div></div>}
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><Navigation size={18}/></span><span>Marga</span><small>India web</small></div>
-      <div className="status-pill" role="status"><span className="status-dot"/>{status}</div>
+      <div className="status-pill" role="status"><span className="status-dot"/>{offline ? (routeCoordinates.length ? "Offline · saved route only. No rerouting." : "Offline · connect to plan a route.") : status}</div>
       <div className="top-actions"><Sheet><SheetTrigger asChild><Button variant="outline" size="icon" aria-label="Open journey journal"><BookOpen size={18}/></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Journey journal</SheetTitle><SheetDescription>{journey ? `Trip to ${journey.destination}` : "Start navigation to create a journal."}</SheetDescription></SheetHeader>{journey && <Journal journey={journey} onExport={exportJourney} onDelete={deleteJourney}/>}</SheetContent></Sheet><Button variant="outline" size="icon" onClick={locateMe} aria-label={hasLocation ? "Recenter on current location" : "Use current location"}><LocateFixed size={18}/></Button></div>
     </header>
     <section className="route-panel" aria-label="Route planner">

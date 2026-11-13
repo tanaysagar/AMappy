@@ -77,11 +77,11 @@ export default function Home() {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const preferencesReady = useRef(false);
   const [origin, setOrigin] = useState<LngLat>(DELHI);
-  const [originText, setOriginText] = useState("New Delhi, Delhi");
-  const [originSelected, setOriginSelected] = useState(true);
-  const [destination, setDestination] = useState("Red Fort, Delhi");
+  const [originText, setOriginText] = useState("");
+  const [originSelected, setOriginSelected] = useState(false);
+  const [destination, setDestination] = useState("");
   const [destinationPoint, setDestinationPoint] = useState<LngLat>(RED_FORT);
-  const [destinationSelected, setDestinationSelected] = useState(true);
+  const [destinationSelected, setDestinationSelected] = useState(false);
   const [searchTarget, setSearchTarget] = useState<SearchTarget>("destination");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [routeSummary, setRouteSummary] = useState<{ distance: string; duration: string; eta: string } | null>(null);
@@ -90,7 +90,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [mapHealth, setMapHealth] = useState<MapHealth>("loading");
   const [listening, setListening] = useState(false);
-  const [companionOpen, setCompanionOpen] = useState(true);
+  const [companionOpen, setCompanionOpen] = useState(false);
+  const [guideInputOpen, setGuideInputOpen] = useState(false);
   const [assistantText, setAssistantText] = useState("Choose a route or use your current location, then I’ll look for verified information around you.");
   const [interests, setInterests] = useState(["History", "Food", "Architecture"]);
   const [routeCoordinates, setRouteCoordinates] = useState<LngLat[]>([]);
@@ -112,7 +113,9 @@ export default function Home() {
   const [voiceLanguage, setVoiceLanguage] = useState("en-IN");
   const [availability, setAvailability] = useState<Record<string, boolean>>({ landmarks: false, food: false, weather: false, traffic: false, incidents: false, events: false, news: false });
   const [question, setQuestion] = useState("");
-  const [pinTarget, setPinTarget] = useState<SearchTarget | null>(null);
+  const [pinTarget, setPinTarget] = useState<SearchTarget>("destination");
+  const [pinDraft, setPinDraft] = useState<LngLat | null>(null);
+  const [pinAddress, setPinAddress] = useState<{ point: LngLat; label: string } | null>(null);
 
   function invalidateEndpoint(target: SearchTarget) {
     endpointRequests.current[target]?.abort();
@@ -289,7 +292,7 @@ export default function Home() {
     finally { if (contextRequest.current === controller) { contextRequest.current = null; setContextLoading(false); } }
   }
 
-  async function calculateRoute(point = destinationPoint, start = origin, preserveOnFailure = false) {
+  async function calculateRoute(point = destinationPoint, start = origin, preserveOnFailure = false, labels = { origin: start === origin ? originText : "Current position", destination }) {
     routeRequest.current?.abort();
     const controller = new AbortController();
     routeRequest.current = controller;
@@ -307,7 +310,7 @@ export default function Home() {
       const coordinates = route.geometry.coordinates as LngLat[];
       const steps: RouteStep[] = (route.legs?.[0]?.steps ?? []).map((step, index) => ({
         id: `route-${routeVersion.current + 1}-${index}`,
-        instruction: maneuverInstruction(step.maneuver ?? {}, step.name, destination),
+        instruction: maneuverInstruction(step.maneuver ?? {}, step.name, labels.destination),
         location: step.maneuver?.location as LngLat,
         distanceMetres: step.distance,
         durationSeconds: step.duration,
@@ -324,7 +327,7 @@ export default function Home() {
       setRouteSummary({ distance: formatDistance(route.distance), duration: `${Math.max(1, Math.round(route.duration / 60))} min`, eta: formatEta(route.duration) });
       const accessDistance = Number.isFinite(data.destinationAccessDistanceMetres) ? data.destinationAccessDistanceMetres as number : null;
       setDestinationAccessDistance(accessDistance);
-      const snapshot: TripSnapshot = { version: 1, origin: start, originText: start === origin ? originText : "Current position", destination, destinationPoint: point, routeCoordinates: coordinates, routeSteps: steps, routeVersion: routeVersion.current, distanceMetres: route.distance, durationSeconds: route.duration, trafficAwareEta: Boolean(data.trafficAwareEta), destinationAccessDistanceMetres: accessDistance, session: null };
+      const snapshot: TripSnapshot = { version: 1, origin: start, originText: labels.origin, destination: labels.destination, destinationPoint: point, routeCoordinates: coordinates, routeSteps: steps, routeVersion: routeVersion.current, distanceMetres: route.distance, durationSeconds: route.duration, trafficAwareEta: Boolean(data.trafficAwareEta), destinationAccessDistanceMetres: accessDistance, session: null };
       tripSnapshotRef.current = snapshot; writeStored(TRIP_KEY, snapshot);
       setAvailability((current) => ({ ...current, traffic: Boolean(data.trafficAwareEta) }));
       setStatus(data.trafficAwareEta ? "Route ready · Mappls traffic ETA" : `Route ready · ${data.provider ?? "basic routing"}`);
@@ -368,11 +371,11 @@ export default function Home() {
     if (target === "origin") { setOrigin(point); setOriginText(label); setOriginSelected(true); showEndpointMarkers(point, destinationPoint); }
     else { setDestinationPoint(point); destinationRef.current = point; setDestination(label); setDestinationSelected(true); showEndpointMarkers(origin, point); }
     setSearchResults([]);
-    setPinTarget(null);
+    setPinDraft(null); setPinTarget("destination");
   }
 
   async function reverseExactEndpoint(point: LngLat, target: SearchTarget, fallbackLabel: string, revision = invalidateEndpoint(target)) {
-    if (point[1] < 6 || point[1] > 38 || point[0] < 68 || point[0] > 98) { setPinTarget(null); setStatus("Choose a point within India"); return; }
+    if (point[1] < 6 || point[1] > 38 || point[0] < 68 || point[0] > 98) { setPinDraft(null); setPinTarget("destination"); setStatus("Choose a point within India"); return; }
     if (endpointRevisions.current[target] !== revision) return;
     endpointRequests.current[target]?.abort();
     const controller = new AbortController();
@@ -404,31 +407,82 @@ export default function Home() {
       if (endpointRequests.current[target] !== controller || endpointRevisions.current[target] !== revision) return;
       setExactEndpoint(data.point, target, result.displayName);
       setStatus(`${target === "origin" ? "Start" : "Destination"} selected from Mappls`);
+      planSelectedEndpoint(data.point, target, result.displayName);
     } catch (error) {
       if ((error as Error).name !== "AbortError") setStatus((error as Error).message);
     }
   }
 
-  function startPinSelection(target: SearchTarget) {
-    invalidateEndpoint(target);
+  const pinLabel = pinDraft && (pinAddress?.point === pinDraft ? pinAddress.label : `${pinDraft[1].toFixed(5)}, ${pinDraft[0].toFixed(5)}`);
+
+  function confirmPin() {
+    if (!pinDraft || !pinLabel || (liveGuidance && pinTarget === "origin")) return;
+    invalidateEndpoint(pinTarget);
     cancelSearch();
-    setPinTarget(target);
-    setStatus(`Click the map to set the exact ${target === "origin" ? "start" : "destination"}`);
+    const liveStart = liveGuidance ? latestPosition.current : null;
+    const currentStart = liveStart && classifyLocationFix(liveStart.accuracy, liveStart.at) === "active" ? liveStart.point : null;
+    if (liveGuidance && !currentStart) {
+      setStatus("Waiting for a fresh GPS fix before changing destination");
+      return;
+    }
+    setExactEndpoint(pinDraft, pinTarget, pinLabel);
+    if (currentStart) {
+      invalidateEndpoint("origin");
+      setOrigin(currentStart);
+      setOriginText("Current position");
+      setOriginSelected(true);
+      showEndpointMarkers(currentStart, pinDraft);
+    }
+    planSelectedEndpoint(pinDraft, pinTarget, pinLabel, currentStart);
+  }
+
+  function planSelectedEndpoint(point: LngLat, target: SearchTarget, label: string, currentStart: LngLat | null = null) {
+    if (target === "origin") {
+      if (destinationSelected) void calculateRoute(destinationPoint, point, false, { origin: label, destination });
+      return;
+    }
+    const labels = { origin: currentStart ? "Current position" : originText || "Current location", destination: label };
+    if (currentStart || originSelected) {
+      void calculateRoute(point, currentStart ?? origin, false, labels);
+    } else if (!originText.trim()) {
+      selectCurrentLocation("origin", (start) => void calculateRoute(point, start, false, labels));
+    } else {
+      setStatus("Choose a starting address or tap the map to set it");
+    }
   }
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !pinTarget) return;
-    map.getCanvas().style.cursor = "crosshair";
-    const selectPin = (event: { lngLat: { lng: number; lat: number } }) => {
-      const point: LngLat = [event.lngLat.lng, event.lngLat.lat];
-      void reverseExactEndpoint(point, pinTarget, `Dropped pin · ${point[1].toFixed(5)}, ${point[0].toFixed(5)}`);
+    if (!map) return;
+    const selectPin = (event: { lngLat: { lng: number; lat: number }; originalEvent: MouseEvent }) => {
+      if ((event.originalEvent.target as Element | null)?.closest(".maplibregl-marker, .maplibregl-ctrl")) return;
+      if (watchRef.current !== null) setPinTarget("destination");
+      setPinDraft([event.lngLat.lng, event.lngLat.lat]);
     };
-    map.once("click", selectPin);
-    return () => { map.off("click", selectPin); map.getCanvas().style.cursor = ""; };
-    // Endpoint selection intentionally uses the current route state captured when pin mode begins.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pinTarget]);
+    map.on("click", selectPin);
+    return () => { map.off("click", selectPin); };
+  }, [drawRoute]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !pinDraft) return;
+    const marker = new maplibregl.Marker({ color: "#176b5b", draggable: true }).setLngLat(pinDraft).addTo(map);
+    marker.on("dragend", () => {
+      const point = marker.getLngLat();
+      setPinDraft([point.lng, point.lat]);
+    });
+    const controller = new AbortController();
+    const [lon, lat] = pinDraft;
+    void fetch(`/api/reverse?lat=${lat}&lon=${lon}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const result = await response.json() as ReverseResult;
+        if (!controller.signal.aborted && result.label) setPinAddress({ point: pinDraft, label: result.label });
+      })
+      .catch(() => { /* Coordinates remain available if lookup fails. */ });
+    return () => { controller.abort(); marker.remove(); };
+  }, [pinDraft, drawRoute]);
+
   function speak(text = assistantText, priority: "companion" | "guidance" = "companion") { if (!voiceEnabled || !("speechSynthesis" in window) || (priority === "companion" && window.speechSynthesis.speaking)) return false; if (priority === "guidance") window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = voiceLanguage; utterance.rate = priority === "guidance" ? 1.02 : .96; window.speechSynthesis.speak(utterance); return true; }
   function announceUsefulCandidate(candidates: ContextCandidate[], drive: typeof attentionContext.current, at = nowMs()) {
     const departure = departureWeatherPending.current && watchRef.current !== null && drive.distanceToManeuver >= Math.max(180, drive.speedMetresPerSecond * 14) ? candidates.find(candidate => candidate.type === "weather" && candidate.validUntil >= at && candidate.confidence >= 0.62) : undefined;
@@ -508,9 +562,11 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demoIndex, driving, routeCoordinates]);
   function startLiveDrive() {
+    if (!window.isSecureContext) return setStatus("Live location needs HTTPS on your phone. Enter a starting address or pin to preview a route.");
     if (!navigator.geolocation) return setStatus("Live location not supported");
     if (!routeCoordinatesRef.current.length) return setStatus("Plan a route before starting live guidance");
     if (watchRef.current !== null) return stopLiveGuidance();
+    setPinDraft(null); setPinTarget("destination");
     setDriving(false); setGpsStatus("acquiring"); setStatus("Acquiring current location…"); setLiveGuidance(true); setFollowMode(true);
     if (!journey || journey.endedAt || journey.destination !== destination) setJourney(persistJourney(createJourney(destination, origin)));
     let firstFix = true;
@@ -535,14 +591,15 @@ export default function Home() {
       setStatus(errorStatus === "denied" ? "Location permission denied. Enter a starting place instead." : errorStatus === "timeout" ? "Location request timed out. Try again or enter a starting place." : "Current location unavailable. Enter a starting place instead.");
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 });
   }
-  function selectCurrentLocation(target: SearchTarget) {
+  function selectCurrentLocation(target: SearchTarget, onSelected?: (point: LngLat) => void) {
+    if (!window.isSecureContext) return setStatus("Live location needs HTTPS on your phone. Enter a starting address or pin to preview a route.");
     if (!navigator.geolocation) return setStatus("Location not supported");
     const revision = invalidateEndpoint(target);
     cancelSearch();
     const cached = latestPosition.current;
     if (cached && classifyLocationFix(cached.accuracy, cached.at) === "active") {
       void reverseExactEndpoint(cached.point, target, `${target === "origin" ? "Current location" : "GPS destination"} · accuracy ${Math.round(cached.accuracy)} m`, revision);
-      setFollowMode(true); mapRef.current?.easeTo({ center: cached.point, zoom: 15, duration: 500 }); return;
+      setFollowMode(true); mapRef.current?.easeTo({ center: cached.point, zoom: 15, duration: 500 }); onSelected?.(cached.point); return;
     }
     setGpsStatus("acquiring"); setStatus("Finding your location…");
     navigator.geolocation.getCurrentPosition(({ coords, timestamp }) => {
@@ -554,7 +611,7 @@ export default function Home() {
       setGpsAccuracy(coords.accuracy); setGpsStatus(fixStatus); updateLiveMarker(point, coords.accuracy, heading);
       if (fixStatus !== "active") { setStatus(fixStatus === "stale" ? "GPS fix is stale. Try again." : `GPS accuracy is ${Math.round(coords.accuracy)} m. Try again for a better fix.`); return; }
       void reverseExactEndpoint(point, target, `${target === "origin" ? "Current location" : "GPS destination"} · accuracy ${Math.round(coords.accuracy)} m`, revision);
-      setFollowMode(true); void refreshContext(point, heading, Math.max(coords.speed ?? 0, 0)); setStatus(`Using current location · accuracy ${Math.round(coords.accuracy)} m`);
+      setFollowMode(true); void refreshContext(point, heading, Math.max(coords.speed ?? 0, 0)); setStatus(`Using current location · accuracy ${Math.round(coords.accuracy)} m`); onSelected?.(point);
     }, (error) => { if (endpointRevisions.current[target] !== revision) return; const errorStatus = classifyLocationError(error.code); setGpsStatus(errorStatus); setStatus(errorStatus === "denied" ? "Location permission denied. Enter a starting place instead." : errorStatus === "timeout" ? "Location request timed out. Try again or enter a starting place." : "Current location unavailable. Enter a starting place instead."); }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
   }
   function locateMe() {
@@ -603,10 +660,10 @@ export default function Home() {
   function toggleInterest(interest: string) { setInterests((current) => current.includes(interest) ? current.filter((item) => item !== interest) : [...current, interest]); }
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!originSelected || !destinationSelected) return setStatus("Choose a search result for both start and destination");
-    void calculateRoute();
+    if (!destinationSelected) return setStatus("Choose a destination from search or the map");
+    planSelectedEndpoint(destinationPoint, "destination", destination);
   }
-  function submitQuestion(event: FormEvent) { event.preventDefault(); const prompt = question; setQuestion(""); void askGrounded(prompt); }
+  function submitQuestion(event: FormEvent) { event.preventDefault(); setGuideInputOpen(false); const prompt = question; setQuestion(""); void askGrounded(prompt); }
   function resetOrFollowMap() {
     const fix = latestPosition.current;
     if (fix) { setFollowMode(true); mapRef.current?.easeTo({ center: fix.point, bearing: fix.heading ?? 0, zoom: 15 }); }
@@ -637,23 +694,18 @@ export default function Home() {
     {mapHealth !== "ready" && <div className={`map-fallback ${mapHealth}`} role="status" aria-live="polite"><div className="map-state"><strong>{mapHealth === "error" ? "Live map unavailable" : "Loading live map…"}</strong><span>{mapHealth === "error" ? "Background image is only a placeholder. Routes and search may still work." : "Connecting to map tiles"}</span>{mapHealth === "error" && <Button type="button" size="sm" onClick={retryMap}><RefreshCw size={14}/>Retry map</Button>}</div></div>}
     <header className="topbar">
       <div className="brand"><span className="brand-mark"><Navigation size={18}/></span><span>Marga</span><small>India web</small></div>
-      <div className="status-pill"><span className="status-dot"/>{status}</div>
+      <div className="status-pill" role="status"><span className="status-dot"/>{status}</div>
       <div className="top-actions"><Sheet><SheetTrigger asChild><Button variant="outline" size="icon" aria-label="Open journey journal"><BookOpen size={18}/></Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Journey journal</SheetTitle><SheetDescription>{journey ? `Trip to ${journey.destination}` : "Start navigation to create a journal."}</SheetDescription></SheetHeader>{journey && <Journal journey={journey} onExport={exportJourney} onDelete={deleteJourney}/>}</SheetContent></Sheet><Button variant="outline" size="icon" onClick={locateMe} aria-label={hasLocation ? "Recenter on current location" : "Use current location"}><LocateFixed size={18}/></Button></div>
     </header>
     <section className="route-panel" aria-label="Route planner">
       <div className="route-heading"><div><p>Plan journey</p><h1>Where to?</h1></div><span className="mode-badge"><Car size={15}/>Driving</span></div>
       <form onSubmit={submit} className="route-form">
-        <div className="field-row"><span className="origin-dot"/><Input value={originText} onChange={(event) => { const value = event.target.value; invalidateEndpoint("origin"); setOriginText(value); setOriginSelected(false); clearPlannedRoute(); scheduleSearch(value, "origin"); }} aria-label="Starting location" autoComplete="off"/>{originText && <button type="button" className="clear-search" aria-label="Clear starting location" onClick={() => { invalidateEndpoint("origin"); cancelSearch(); setOriginText(""); setOriginSelected(false); clearPlannedRoute(); }}><X size={15}/></button>}</div>
+        <div className="field-row"><span className="origin-dot"/><Input onFocus={() => { if (!liveGuidance) { setPinTarget("origin"); setPinDraft(null); } }} placeholder="Your location" value={originText} onChange={(event) => { const value = event.target.value; invalidateEndpoint("origin"); setOriginText(value); setOriginSelected(false); clearPlannedRoute(); scheduleSearch(value, "origin"); }} aria-label="Starting location" autoComplete="off"/>{originText && <button type="button" className="clear-search" aria-label="Clear starting location" onClick={() => { invalidateEndpoint("origin"); cancelSearch(); setOriginText(""); setOriginSelected(false); clearPlannedRoute(); }}><X size={15}/></button>}</div>
         {searchTarget === "origin" && searchResults.length > 0 && <div className="search-results origin-results" role="listbox" aria-label="Starting place results">{searchResults.map((result) => <button type="button" role="option" aria-selected="false" onClick={() => void pickResult(result, "origin")} key={result.id}><MapPin size={15}/><span>{result.displayName}</span><small>{result.precision}</small></button>)}</div>}
-        <div className="field-row destination-field"><MapPin size={17}/><Input value={destination} onChange={(event) => { const value = event.target.value; invalidateEndpoint("destination"); setDestination(value); setDestinationSelected(false); destinationRef.current = null; clearPlannedRoute(); scheduleSearch(value, "destination"); }} aria-label="Destination" autoComplete="off"/>{destination && <button type="button" className="clear-search" aria-label="Clear destination" onClick={() => { invalidateEndpoint("destination"); cancelSearch(); setDestination(""); setDestinationSelected(false); destinationRef.current = null; clearPlannedRoute(); }}><X size={15}/></button>}</div>
+        <div className="field-row destination-field"><MapPin size={17}/><Input onFocus={() => { setPinTarget("destination"); setPinDraft(null); }} placeholder="Search or tap the map" value={destination} onChange={(event) => { const value = event.target.value; invalidateEndpoint("destination"); setDestination(value); setDestinationSelected(false); destinationRef.current = null; clearPlannedRoute(); scheduleSearch(value, "destination"); }} aria-label="Destination" autoComplete="off"/>{destination && <button type="button" className="clear-search" aria-label="Clear destination" onClick={() => { invalidateEndpoint("destination"); cancelSearch(); setDestination(""); setDestinationSelected(false); destinationRef.current = null; clearPlannedRoute(); }}><X size={15}/></button>}</div>
         {searchTarget === "destination" && searchResults.length > 0 && <div className="search-results destination-results" role="listbox" aria-label="Destination results">{searchResults.map((result) => <button type="button" role="option" aria-selected="false" onClick={() => void pickResult(result, "destination")} key={result.id}><MapPin size={15}/><span>{result.displayName}</span><small>{result.precision}</small></button>)}</div>}
-        <div className="endpoint-actions" aria-label="Exact endpoint options">
-          <button type="button" onClick={() => selectCurrentLocation("origin")}><LocateFixed size={14}/>GPS start</button>
-          <button type="button" onClick={() => startPinSelection("origin")}><MapPin size={14}/>Pin start</button>
-          <button type="button" onClick={() => selectCurrentLocation("destination")}><LocateFixed size={14}/>GPS destination</button>
-          <button type="button" onClick={() => startPinSelection("destination")}><MapPin size={14}/>Pin destination</button>
-        </div>
-        <Button type="submit" className="route-button" disabled={loading || !originSelected || !destinationSelected}><Route size={17}/>{loading ? "Calculating…" : "Find route"}</Button>
+        <small>Tap the map to choose {pinTarget === "origin" && !liveGuidance ? "a starting point" : "a destination"}.</small>
+        <Button type="submit" className="route-button" disabled={loading || !destinationSelected}><Route size={17}/>{loading ? "Calculating…" : "Find route"}</Button>
       </form>
       {routeSummary && <div className="route-card">
         <div className="trip-stats"><strong>{routeSummary.duration}</strong><span>{routeSummary.distance}</span><span>ETA {routeSummary.eta}</span></div>
@@ -662,15 +714,26 @@ export default function Home() {
         {destinationAccessDistance !== null && destinationAccessDistance > 75 && <div className="access-warning" role="status"><MapPin size={14}/>The route ends about {formatDistance(destinationAccessDistance)} from your selected pin. Check the correct entrance before arrival.</div>}
         <div className="navigation-actions"><Button type="button" onClick={toggleDemoDrive}>{driving ? <Pause size={15}/> : <Play size={15}/>} {driving ? "Pause preview" : "Preview route"}</Button><Button type="button" variant="outline" onClick={startLiveDrive}><LocateFixed size={15}/> {liveGuidance ? "End navigation" : "Start navigation"}</Button></div>
       </div>}
+      <details className="guide-settings"><summary>Guide settings</summary>
       <div className="interest-block"><div><p>Your interests</p><span>Guide prioritizes these</span></div><div className="interest-list">{INTERESTS.map((interest) => <button key={interest} onClick={() => toggleInterest(interest)} className={interests.includes(interest) ? "selected" : ""}>{interests.includes(interest) && <Check size={13}/>} {interest}</button>)}</div></div>
       <div className="preference-block"><div className="preference-heading"><span>Talkativeness</span><strong>{["", "Quiet", "Balanced", "Talkative"][talkativeness]}</strong></div><Slider min={1} max={3} step={1} value={[talkativeness]} onValueChange={(value) => setTalkativeness(value[0])} aria-label="Companion talkativeness"/><div className="voice-setting"><label htmlFor="voice-toggle">Voice responses</label><Switch id="voice-toggle" checked={voiceEnabled} onCheckedChange={setVoiceEnabled}/></div><select value={voiceLanguage} onChange={(event) => setVoiceLanguage(event.target.value)} aria-label="Voice language"><option value="en-IN">English (India)</option><option value="hi-IN">Hindi</option><option value="bn-IN">Bengali</option><option value="ta-IN">Tamil</option><option value="te-IN">Telugu</option><option value="mr-IN">Marathi</option></select></div>
       <div className="provider-health"><p>Data available for this area</p><div>{["weather","landmarks","food","culture","nature","shopping","sports","traffic","incidents","events","news"].map((source) => <span key={source} className={availability[source] ? "available" : "unavailable"}><i/>{source}</span>)}</div></div>
       <details className="privacy-note"><summary>Location &amp; privacy</summary><p>Route and nearby requests send coordinates to the listed map and information providers. Your preferences, active trip and journal stay in this browser. Clear a route or delete its journal to remove that local trip data.</p></details>
+      </details>
     </section>
-    {pinTarget && <div className="pin-picker" role="status"><strong>Set exact {pinTarget}</strong><span>Click anywhere on the map, or use its centre.</span><div><button type="button" onClick={() => { const center = mapRef.current?.getCenter(); if (center) void reverseExactEndpoint([center.lng, center.lat], pinTarget, `Dropped pin · ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`); }}>Use map centre</button><button type="button" onClick={() => { setPinTarget(null); setStatus("Pin selection cancelled"); }}>Cancel</button></div></div>}
+    {pinDraft && <div className="pin-picker" aria-label="Confirm map pin">
+      <strong>{pinTarget === "origin" ? "Starting point" : "Destination"}</strong>
+      <span aria-live="polite">{pinDraft[1] < 6 || pinDraft[1] > 38 || pinDraft[0] < 68 || pinDraft[0] > 98 ? "Choose a point within India." : pinLabel}</span>
+      <span>{liveGuidance ? "Confirm to end guidance and plan the new route." : "Drag the pin to adjust its location."}</span>
+      <div>
+        <button type="button" onClick={confirmPin} disabled={pinDraft[1] < 6 || pinDraft[1] > 38 || pinDraft[0] < 68 || pinDraft[0] > 98}>{liveGuidance ? "End guidance and change destination" : pinTarget === "origin" ? "Use as start" : "Directions"}</button>
+        <button type="button" onClick={() => { setPinDraft(null); setPinTarget("destination"); }}>Cancel</button>
+      </div>
+    </div>}
     <button className="map-control" aria-label={hasLocation && !following ? "Resume map follow" : "Reset compass"} onClick={resetOrFollowMap}>{hasLocation && !following ? <LocateFixed size={20}/> : <Compass size={20}/>}</button>
     {companionOpen && <aside className="companion-card" aria-live="polite"><div className="companion-top"><span className="guide-icon"><Sparkles size={17}/></span><div><small>ROAD GUIDE</small><strong>Worth knowing now</strong></div><button aria-label="Dismiss" onClick={() => setCompanionOpen(false)}><X size={17}/></button></div><p>{assistantText}</p><div className="source-row">{assistantSource ? <a href={assistantSource.url} target="_blank" rel="noreferrer">Source: {assistantSource.name}</a> : <span>Waiting for verified context</span>}<button onClick={() => speak()}><Volume2 size={15}/>Read aloud</button><button onClick={() => void refreshContext()}>{contextLoading ? "Checking…" : "Refresh"}</button></div></aside>}
-    <form className="voice-dock" onSubmit={submitQuestion}><button type="button" className={listening ? "voice-button listening" : "voice-button"} onClick={toggleVoice} aria-label={listening ? "Stop listening" : "Ask road guide"}>{listening ? <MicOff size={24}/> : <Mic size={24}/>}</button><div><strong>{listening ? "Listening…" : "Ask your road guide"}</strong><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Anything interesting ahead?" aria-label="Question for road guide"/></div><button type="submit" className="send-question" aria-label="Send question" disabled={!question.trim()}><Send size={17}/></button></form>
+    <button type="button" className="mobile-guide-toggle" aria-expanded={guideInputOpen} aria-controls="road-guide-input" onClick={() => setGuideInputOpen(!guideInputOpen)}><Sparkles size={19}/><span>Guide</span></button>
+    <form id="road-guide-input" className={guideInputOpen ? "voice-dock guide-input-open" : "voice-dock"} onSubmit={submitQuestion}><button type="button" className={listening ? "voice-button listening" : "voice-button"} onClick={toggleVoice} aria-label={listening ? "Stop listening" : "Ask road guide"}>{listening ? <MicOff size={24}/> : <Mic size={24}/>}</button><div><strong>{listening ? "Listening…" : "Ask your road guide"}</strong><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Anything interesting ahead?" aria-label="Question for road guide"/></div><button type="submit" className="send-question" aria-label="Send question" disabled={!question.trim()}><Send size={17}/></button></form>
   </main>;
 }
 

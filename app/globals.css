@@ -24,3 +24,32 @@
 .live-location-marker{position:relative;display:grid;place-items:center;border:2px solid rgba(23,107,91,.35);border-radius:50%;background:rgba(80,179,153,.18);transition:width .25s,height .25s}.live-location-dot{position:absolute;width:18px;height:18px;border:3px solid #fff;border-radius:50%;background:#176b5b;box-shadow:0 2px 8px rgba(10,45,37,.4)}.live-location-heading{position:absolute;left:50%;bottom:50%;width:0;height:0;border-right:7px solid transparent;border-bottom:22px solid #176b5b;border-left:7px solid transparent;transform-origin:50% 100%}.route-button:disabled{opacity:.55}
 .search-results button{grid-template-columns:auto minmax(0,1fr) auto}.search-results button small{color:#7b8985;font-size:10px;text-transform:capitalize}.endpoint-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}.endpoint-actions button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:34px;padding:6px;border:1px solid #dfe5e1;border-radius:9px;color:#365149;background:#f7f9f7;font-size:11px;font-weight:700;cursor:pointer}.endpoint-actions button:hover,.endpoint-actions button:focus-visible{border-color:#76a99d;background:#eef6f2}.pin-picker{position:absolute;z-index:12;left:50%;top:94px;transform:translateX(-50%);display:grid;justify-items:center;gap:5px;min-width:280px;padding:12px 16px;border:1px solid rgba(255,255,255,.9);border-radius:15px;background:rgba(16,37,31,.94);color:#fff;box-shadow:0 16px 36px rgba(16,37,31,.25);text-align:center}.pin-picker strong{font-size:13px}.pin-picker span{color:#c8d5d0;font-size:11px}.pin-picker div{display:flex;gap:7px;margin-top:3px}.pin-picker button{padding:6px 9px;border:1px solid #668078;border-radius:8px;color:#fff;background:transparent;font-size:11px;cursor:pointer}.pin-picker button:first-child{border-color:#ffb27c;color:#2b2925;background:#ffb27c}
 @media(max-width:800px){.pin-picker{top:101px}.endpoint-actions{grid-template-columns:1fr 1fr}}
+
+.guide-settings { margin-top: 12px; }
+.guide-settings > summary { cursor: pointer; color: #365149; font-size: 13px; }
+@media (max-width: 800px) {
+  .route-panel { max-height: 36dvh; padding: 10px 12px; bottom: max(8px, env(safe-area-inset-bottom)); }
+  .route-heading { display: none; }
+  .route-form { margin-top: 0; gap: 5px; }
+  .field-row input { height: 36px; font-size: 16px; }
+  .route-button { height: 36px !important; }
+  .origin-results { top: 39px; }
+  .destination-results { top: 80px; }
+  .search-results { position: static; max-height: 18dvh; overflow: auto; }
+  .guide-settings .interest-block { display: block; }
+  .voice-dock { bottom: auto; top: 110px; }
+  .companion-card { top: 172px; max-height: 24dvh; overflow: auto; }
+  .pin-picker { top: auto; bottom: calc(36dvh + 18px); max-width: calc(100vw - 24px); }
+  .maplibregl-ctrl-bottom-right { bottom: 37dvh; }
+  .status-pill { white-space: normal; max-width: calc(100vw - 76px); }
+}
+
+.mobile-guide-toggle { display: none; }
+@media (max-width: 800px) {
+  .mobile-guide-toggle { position: absolute; z-index: 10; top: 131px; right: 10px; display: grid; justify-items: center; gap: 2px; padding: 5px; min-width: 44px; min-height: 44px; border-radius: 12px; color: #173e35; background: #fff; box-shadow: 0 3px 14px #152e2a33; font-size: 10px; }
+  .voice-dock { display: none; }
+  .voice-dock.guide-input-open { display: flex; top: 185px; width: min(350px, calc(100% - 20px)); min-width: 0; }
+  .voice-dock > div { flex: 1; min-width: 0; }
+  .voice-dock input { font-size: 16px; }
+  .companion-card { top: 250px; }
+}
